@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Similar Users{% endblock %}
+
+{% block body %}
+<head>
+    <title>Bullshitters</title>
+</head>
+<body style="background-color: lightgray;">
+    <h1 style="color: rgb(190, 6, 6);text-align: center;">Bullshitters</h1>
+    {% if results %}
+        <ul >
+        {% for area, users in results.items %}
+            <li class="card" style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                <strong>Stupid {{ area }} users</strong>
+                <ul>
+                    {% for user in users %}
+                        <li style="margin: 5px 0;">
+                            User: {{ user.user }} | Fame Level: {{ user.fame_level_numeric }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No bullshitters found.</p>
+    {% endif %}
+<a href="{% url 'sn:timeline' %}">Back to Timeline</a>
+{% endblock %}

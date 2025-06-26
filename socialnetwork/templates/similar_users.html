@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Similar Users{% endblock %}
+
+{% block body %}
+<h2 style="color: rgb(2, 74, 198);text-align: center;">Similar Users</h2>
+<ul style="list-style-type:disc; padding: 4; margin: 30px;"">
+    {% for user in similar_users %}
+        <li style="padding: 0.5em;">{{ user.username }}</li>
+    {% empty %}
+        <li>No similar users found.</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'sn:timeline' %}">back to timeline</a>
+{% endblock %}
