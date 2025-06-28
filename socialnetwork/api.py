@@ -251,17 +251,15 @@ def bullshitters():
     #########################
     result = {}
     for area in ExpertiseAreas.objects.all():
-        users = area.fame_set.filter(
-            fame_level__numeric_value__lt=0
-        ).order_by("fame_level__numeric_value", "-user__date_joined")
+        users = Fame.objects.filter(expertise_area=area, fame_level__numeric_value__lt=0).order_by("fame_level__numeric_value", "-user__date_joined")
         if users.exists():
             result[area] = [
-                {"user": u.user, "fame_level_numeric": u.fame_level.numeric_value} #The user object (u.user)
+                {"user": u.user, "fame_level_numeric": u.fame_level.numeric_value}
                 for u in users
             ]
     return result
 
-    # area.fame_set gets all Fame records related to this expertise area (Django automatically creates this for relationships).
+    # gets all Fame records related to this expertise area .
     # .filter(fame_level__numeric_value__lt=0) finds only those fame records where the fame level’s numeric value is less than 0 (negative fame).
     # .order_by("fame_level__numeric_value", "-user__date_joined") sorts the results:
     # First by fame level (lowest/most negative first).
@@ -307,7 +305,10 @@ def similar_users(user: SocialNetworkUsers):
     
     user_fames = Fame.objects.filter(user=user)
     user_expertise_areas = list(user_fames.values_list('expertise_area', flat=True))
-    user_fame_dict = {f.expertise_area_id: f.fame_level.numeric_value for f in user_fames.select_related('fame_level')}
+
+    user_fame_dict = {}
+    for fame in user_fames.select_related('fame_level'):
+        user_fame_dict[fame.expertise_area_id] = fame.fame_level.numeric_value
     # Creates a dictionary mapping each expertise area ID to the user’s fame level (as a number).
 
     n_areas = len(user_expertise_areas)
@@ -342,14 +343,29 @@ def similar_users(user: SocialNetworkUsers):
     # Sorts users by highest similarity, and if tied, by newest join date.
     # tup[1] is the similarity score.
 
-    user_ids = [u.id for u, _ in results]
-    similarity_map = {u.id: sim for u, sim in results}
-    qs = FameUsers.objects.filter(id__in=user_ids).annotate(
+    user_ids = []
+    for user_info in results:
+        user_ids.append(user_info[0].id)
+
+    similarity_map = {}
+    for user, score in results:
+        similarity_map[user.id] = score
+
+    similarity_cases = []
+    for user_id, score in similarity_map.items():
+        condition = When(id=user_id, then=Value(score))
+        similarity_cases.append(condition)
+
+    #queryset
+    qs = FameUsers.objects.filter(id__in=user_ids)
+    qs = qs.annotate(
         similarity=Case(
-            *[When(id=uid, then=Value(sim)) for uid, sim in similarity_map.items()],
+            *similarity_cases,
             output_field=FloatField()
         )
-    ).order_by('-similarity', '-date_joined')
+    )
+
+    qs = qs.order_by('-similarity', '-date_joined')
     return qs
     # Gets the matching users from the database.
     # Adds a similarity field to each user, using the calculated similarity.
